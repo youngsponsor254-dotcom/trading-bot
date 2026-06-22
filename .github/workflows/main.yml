@@ -21,4 +21,4 @@ jobs:
         run: pip install requests yfinance pandas
 
       - name: Run bot
-        run: python backtest.py
+        run: python bot.py
