@@ -1,7 +1,6 @@
 import requests
 import yfinance as yf
 
-# PASTE YOUR FULL WEBHOOK URL HERE
 webhook_url = "https://discord.com/api/webhooks/1518322612260835408/EPwi1MJA3QMQldKh3hohFD-nIg2ahtfcX3X0zr4b2XkbDf3Fbw0BExCI4-AvSsc9KQtR"
 
 def send_discord_alert(message):
@@ -12,20 +11,29 @@ def send_discord_alert(message):
 
 try:
     ticker = yf.Ticker("GBPUSD=X")
-    # Changed to 5d to ensure we have plenty of data to work with
-    df = ticker.history(period="5d", interval="1h")
+    # Fetch 20 days of hourly data to ensure we have enough for a 200-period EMA
+    df = ticker.history(period="20d", interval="1h")
     latest_price = float(ticker.fast_info['last_price'])
     
-    if len(df) >= 3:
+    # Calculate 200-period EMA
+    ema200 = df['Close'].ewm(span=200, adjust=False).mean().iloc[-1]
+    
+    # Logic: Only alert Bullish if price is ABOVE EMA200 (Trend Filter)
+    if len(df) >= 200:
         candle1_high = float(df['High'].iloc[-3])
         candle3_low = float(df['Low'].iloc[-2])
         
-        if candle3_low > candle1_high:
-            msg = f"📈 **BULLISH FVG DETECTED!**\nPrice `{latest_price:.5f}` is near the gap."
+        is_bullish_fvg = candle3_low > candle1_high
+        trend_is_up = latest_price > ema200
+        
+        if is_bullish_fvg and trend_is_up:
+            msg = f"🚀 **HIGH PROBABILITY BULLISH FVG!**\nPrice `{latest_price:.5f}` is above 200 EMA (`{ema200:.5f}`)."
+        elif is_bullish_fvg:
+            msg = f"⚠️ **BULLISH FVG DETECTED** but Price `{latest_price:.5f}` is BELOW 200 EMA. Skipping trade."
         else:
-            msg = f"🕒 **MARKET UPDATE:** Price is `{latest_price:.5f}`. No FVG gap detected right now."
+            msg = f"🕒 **MARKET STATUS:** Price `{latest_price:.5f}` | 200 EMA: `{ema200:.5f}`. No FVG."
     else:
-        msg = "⚠️ Market data is still loading or insufficient."
+        msg = "⚠️ Collecting more market data for EMA calculation..."
         
     send_discord_alert(msg)
 except Exception as e:
