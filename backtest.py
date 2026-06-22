@@ -1,21 +1,19 @@
 import yfinance as yf
 
-# List of pairs to test
-pairs = ["GBPUSD=X", "EURUSD=X", "USDJPY=X"]
+# Your new, more stable basket
+pairs = ["USDJPY=X", "USDCHF=X", "EURJPY=X"]
 
-def backtest_multi_pair():
+def backtest_new_basket():
     total_balance = 1000.00
-    # Each pair gets 1/3 of the total bankroll
-    # We risk 2% of the total balance across the 3 pairs
     risk_per_trade = (total_balance * 0.02) / 3 
     
-    print(f"--- Starting Multi-Pair Backtest (1 Month) ---")
+    print(f"--- Starting New Basket Backtest (1 Month) ---")
     
     for pair in pairs:
         ticker = yf.Ticker(pair)
         df = ticker.history(period="1mo", interval="1h")
         
-        pair_balance = 0 # Track profit/loss per pair
+        pair_balance = 0 
         
         for i in range(24, len(df) - 10):
             key_high = df['High'].iloc[i-24:i].max()
@@ -44,4 +42,4 @@ def backtest_multi_pair():
         
     print(f"--- Final Combined Balance: ${total_balance:.2f} ---")
 
-backtest_multi_pair()
+backtest_new_basket()
