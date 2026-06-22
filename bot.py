@@ -11,29 +11,36 @@ def send_discord_alert(message):
 
 try:
     ticker = yf.Ticker("GBPUSD=X")
-    # Fetch 20 days of hourly data to ensure we have enough for a 200-period EMA
     df = ticker.history(period="20d", interval="1h")
     latest_price = float(ticker.fast_info['last_price'])
-    
-    # Calculate 200-period EMA
     ema200 = df['Close'].ewm(span=200, adjust=False).mean().iloc[-1]
     
-    # Logic: Only alert Bullish if price is ABOVE EMA200 (Trend Filter)
-    if len(df) >= 200:
+    if len(df) >= 3:
         candle1_high = float(df['High'].iloc[-3])
         candle3_low = float(df['Low'].iloc[-2])
         
-        is_bullish_fvg = candle3_low > candle1_high
-        trend_is_up = latest_price > ema200
+        # Define FVG zone
+        fvg_top = candle3_low
+        fvg_bottom = candle1_high
         
-        if is_bullish_fvg and trend_is_up:
-            msg = f"🚀 **HIGH PROBABILITY BULLISH FVG!**\nPrice `{latest_price:.5f}` is above 200 EMA (`{ema200:.5f}`)."
-        elif is_bullish_fvg:
-            msg = f"⚠️ **BULLISH FVG DETECTED** but Price `{latest_price:.5f}` is BELOW 200 EMA. Skipping trade."
+        is_bullish_fvg = candle3_low > candle1_high
+        
+        # Check if price has already entered the FVG (Filled/Consumed)
+        is_filled = latest_price >= fvg_bottom and latest_price <= fvg_top
+        
+        trend_up = latest_price > ema200
+        
+        if is_bullish_fvg:
+            if is_filled:
+                msg = f"📉 **FVG CONSUMED:** Price `{latest_price:.5f}` has filled the FVG. Discarding zone."
+            elif trend_up:
+                msg = f"🚀 **HIGH PROBABILITY BULLISH FVG!** Zone: `{fvg_bottom:.5f} - {fvg_top:.5f}`."
+            else:
+                msg = f"⚠️ **BULLISH FVG DETECTED** but Price is BELOW 200 EMA. Skipping."
         else:
-            msg = f"🕒 **MARKET STATUS:** Price `{latest_price:.5f}` | 200 EMA: `{ema200:.5f}`. No FVG."
+            msg = f"🕒 **MARKET STATUS:** Price `{latest_price:.5f}` | EMA200: `{ema200:.5f}`. No active FVG."
     else:
-        msg = "⚠️ Collecting more market data for EMA calculation..."
+        msg = "⚠️ Collecting more market data..."
         
     send_discord_alert(msg)
 except Exception as e:
