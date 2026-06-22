@@ -1,32 +1,28 @@
 import yfinance as yf
 
-def run_advanced_backtest():
+def run_profit_backtest():
     ticker = yf.Ticker("GBPUSD=X")
-    # Get 2 months of data to ensure we have enough "Previous Day" context
-    df = ticker.history(period="2mo", interval="1h")
+    df = ticker.history(period="3mo", interval="1h")
     
-    wins, losses = 0, 0
-    # Rule: 24-hour lookback for support
+    balance = 1000 # Starting with $1000
+    risk_per_trade = 10 # Risk $10 per trade
     
-    for i in range(24, len(df) - 5):
-        # 1. Trend Filter
+    for i in range(24, len(df) - 10):
+        # Your "Rectified" Logic
         ema200 = df['Close'].iloc[i-200:i].mean()
         is_bearish = df['Close'].iloc[i] < ema200
-        
-        # 2. Liquidity Sweep (Rule 2)
         swing_low = df['Low'].iloc[i-24:i].min()
-        liquidity_swept = df['Low'].iloc[i] < swing_low and df['Close'].iloc[i] > swing_low
+        liquidity_swept = df['Low'].iloc[i] < swing_low
         
-        # 3. Execution (The "Rectified" Logic)
         if is_bearish and liquidity_swept:
-            # Simulate a trade: If price moves up 2% before dropping 1%
-            if df['High'].iloc[i+1:i+5].max() > df['Close'].iloc[i] * 1.002:
-                wins += 1
+            # SIMULATED TRADE
+            # We risk $10 to make $30 (1:3 ratio)
+            # If price drops within next 10 hours: WIN
+            if df['Low'].iloc[i+1:i+10].min() < (df['Close'].iloc[i] * 0.997):
+                balance += 30 # Win
             else:
-                losses += 1
+                balance -= 10 # Loss
                 
-    win_rate = (wins / (wins + losses)) * 100
-    print(f"--- Rectified Backtest Results ---")
-    print(f"Win Rate: {win_rate:.2f}%")
+    print(f"--- Final Account Balance: ${balance:.2f} ---")
 
-run_advanced_backtest()
+run_profit_backtest()
