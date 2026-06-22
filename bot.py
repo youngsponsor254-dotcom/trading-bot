@@ -30,7 +30,9 @@ try:
                 msg = f"📈 **BULLISH FVG DETECTED!**\nPrice `{latest_price:.5f}` is in the zone (`{fvg_bottom:.5f} - {fvg_top:.5f}`)."
                 send_discord_alert(msg)
             else:
-                print(f"Price {latest_price:.5f} is outside the zone.")
+                # This makes the bot send an "All clear" message every hour
+                msg = f"🕒 **MARKET UPDATE:**\nPrice: `{latest_price:.5f}`. Currently outside your FVG zone (`{fvg_bottom:.5f} - {fvg_top:.5f}`). Still watching..."
+                send_discord_alert(msg)
         else:
             print("No new FVG detected.")
     else:
