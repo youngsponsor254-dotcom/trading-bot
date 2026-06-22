@@ -1,26 +1,39 @@
 import requests
+import yfinance as yf
 
-# 1. Configuration
-fvg_top = 1.32281
-fvg_bottom = 1.32110
-webhook_url = "https://discord.com/api/webhooks/1518322612260835408/EPwi1MJA3QMQldKh3hohFD-nIg2ahtfcX3X0zr4b2XkbDf3Fbw0BExCI4-AvSsc9KQtR"
+# Replace this with your actual Discord Webhook URL
+webhook_url = "PASTE_YOUR_REAL_DISCORD_WEBHOOK_URL_HERE"
 
 def send_discord_alert(message):
-    data = {"content": message}
-    requests.post(webhook_url, json=data)
+    print(message)
+    if "PASTE_YOUR_REAL" not in webhook_url:
+        try:
+            requests.post(webhook_url, json={"content": message}, timeout=10)
+        except Exception as e:
+            print(f"Discord error: {e}")
 
-# 2. Get live data
-url = "https://api.frankfurter.app/latest?from=GBP&to=USD"
-response = requests.get(url)
-data = response.json()
-latest_price = data['rates']['USD']
-
-# 3. Check status
-if latest_price >= fvg_bottom and latest_price <= fvg_top:
-    msg = f"SIGNAL READY! Price: {latest_price:.5f}. LOOK FOR BUY."
-    send_discord_alert(msg)
-    print(msg)
-elif latest_price < fvg_bottom:
-    print(f"Latest Price: {latest_price:.5f} - WAITING (Price below zone)")
-else:
-    print(f"Latest Price: {latest_price:.5f} - WAITING (Price above zone)")
+print("Fetching latest GBP/USD market structure...")
+try:
+    ticker = yf.Ticker("GBPUSD=X")
+    df = ticker.history(period="5h", interval="1h")
+    
+    if len(df) >= 3:
+        candle1_high = float(df['High'].iloc[-3])
+        candle3_low = float(df['Low'].iloc[-2])
+        latest_price = float(ticker.fast_info['last_price'])
+        
+        if candle3_low > candle1_high:
+            fvg_bottom = candle1_high
+            fvg_top = candle3_low
+            
+            if fvg_bottom <= latest_price <= fvg_top:
+                msg = f"📈 **BULLISH FVG DETECTED!**\nPrice `{latest_price:.5f}` is in the zone (`{fvg_bottom:.5f} - {fvg_top:.5f}`)."
+                send_discord_alert(msg)
+            else:
+                print(f"Price {latest_price:.5f} is outside the zone.")
+        else:
+            print("No new FVG detected.")
+    else:
+        print("Not enough market data.")
+except Exception as e:
+    print(f"Analysis failed: {e}")
