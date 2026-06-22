@@ -38,8 +38,8 @@ try:
         elif is_bearish_fvg and not is_filled and latest_price < ema200:
             msg = "@here 📉 **POSSIBLE SELL: BEARISH FVG DETECTED.**"
             for i in range(3): send_discord_alert(msg); time.sleep(2)
-        elif current_hour == 8:
-            send_discord_alert(f"🕒 **HEARTBEAT:** Price: {latest_price:.5f}")
+        # Force a heartbeat to confirm the Discord connection works
+        send_discord_alert(f"🕒 **TEST HEARTBEAT:** The bot is alive! Price: {latest_price:.5f}")
         else:
             print("DEBUG: No conditions met. Quiet mode.")
     else:
