@@ -2,7 +2,7 @@ import requests
 import yfinance as yf
 
 # Replace this with your actual Discord Webhook URL
-webhook_url = "PASTE_YOUR_REAL_DISCORD_WEBHOOK_URL_HERE"
+webhook_url = "https://discord.com/api/webhooks/1518322612260835408/EPwi1MJA3QMQldKh3hohFD-nIg2ahtfcX3X0zr4b2XkbDf3Fbw0BExCI4-AvSsc9KQtR"
 
 def send_discord_alert(message):
     print(message)
