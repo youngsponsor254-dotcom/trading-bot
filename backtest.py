@@ -1,39 +1,42 @@
 import yfinance as yf
 
-def run_silver_bullet_1to2():
+def run_silver_bullet_optimized():
     ticker = yf.Ticker("GBPUSD=X")
-    df = ticker.history(period="1mo", interval="1h")
+    # Using 3 months of data to ensure the strategy is robust
+    df = ticker.history(period="3mo", interval="1h")
     
     balance = 1000.00
-    risk = 20.00
-    reward = 40.00 # 1:2 Ratio
     
-    print("--- Testing Silver Bullet 1:2 Strategy ---")
+    print("--- Running Volatility-Adjusted Silver Bullet ---")
     
     for i in range(24, len(df) - 10):
-        # London Session (8 AM - 11 AM EAT)
+        # London Session Filter (8 AM - 11 AM EAT)
         hour = df.index[i].hour
         if 8 <= hour <= 11:
             
-            # Liquidity Sweep (Highs/Lows of previous 5 hours)
+            # Dynamic Volatility Filter (ATR-like logic)
+            atr = df['High'].iloc[i-5:i].max() - df['Low'].iloc[i-5:i].min()
+            sl_val = max(0.0020, atr * 1.5) # Minimum 20 pips, or 1.5x volatility
+            tp_val = sl_val * 2.0           # 1:2 Risk-Reward
+            
             high_prev = df['High'].iloc[i-5:i].max()
             low_prev = df['Low'].iloc[i-5:i].min()
             
-            # Entry logic: Sweep + Close back inside
+            # Entry logic
             if df['High'].iloc[i] > high_prev and df['Close'].iloc[i] < df['Open'].iloc[i]:
-                # Sell: Target 40 pips profit, 20 pips loss
-                if df['Low'].iloc[i+1:i+6].min() < (df['Close'].iloc[i] - 0.0040):
-                    balance += reward
+                # Sell
+                if df['Low'].iloc[i+1:i+6].min() < (df['Close'].iloc[i] - tp_val):
+                    balance += (tp_val * 10000) * 0.10 # Simplified profit calc
                 else:
-                    balance -= risk
+                    balance -= (sl_val * 10000) * 0.10
             
             elif df['Low'].iloc[i] < low_prev and df['Close'].iloc[i] > df['Open'].iloc[i]:
-                # Buy: Target 40 pips profit, 20 pips loss
-                if df['High'].iloc[i+1:i+6].max() > (df['Close'].iloc[i] + 0.0040):
-                    balance += reward
+                # Buy
+                if df['High'].iloc[i+1:i+6].max() > (df['Close'].iloc[i] + tp_val):
+                    balance += (tp_val * 10000) * 0.10
                 else:
-                    balance -= risk
+                    balance -= (sl_val * 10000) * 0.10
 
     print(f"--- Final Account Balance: ${balance:.2f} ---")
 
-run_silver_bullet_1to2()
+run_silver_bullet_optimized()
