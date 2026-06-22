@@ -1,37 +1,41 @@
 import yfinance as yf
 
-def run_high_probability_backtest():
+def run_silver_bullet_backtest():
     ticker = yf.Ticker("GBPUSD=X")
-    df = ticker.history(period="3mo", interval="1h")
+    df = ticker.history(period="1mo", interval="1h")
     
     balance = 1000.00
-    risk = 20.00   # 20 pips SL
-    reward = 60.00 # 60 pips TP (1:3 ratio)
+    risk = 20.00
+    reward = 50.00 # 1:2.5 Ratio
     
-    print("--- Running High-Probability 1:3 Backtest ---")
+    print("--- Testing Silver Bullet Methodology ---")
     
-    for i in range(200, len(df) - 36):
-        ema200 = df['Close'].iloc[i-200:i].mean()
-        
-        # Identify FVG: The gap between candle i-3 and i-1
-        fvg_detected = (df['Low'].iloc[i-1] > df['High'].iloc[i-3])
-        
-        # Entry Logic: Trend + FVG + Price Touch
-        if df['Close'].iloc[i] > ema200 and fvg_detected:
-            # Buy setup
-            # Did it hit +60 pips before -20 pips?
-            if df['High'].iloc[i+1:i+36].max() > (df['Close'].iloc[i] + 0.0060):
-                balance += reward
-            else:
-                balance -= risk
-                
-        elif df['Close'].iloc[i] < ema200 and fvg_detected:
-            # Sell setup
-            if df['Low'].iloc[i+1:i+36].min() < (df['Close'].iloc[i] - 0.0060):
-                balance += reward
-            else:
-                balance -= risk
-                
+    for i in range(24, len(df) - 10):
+        # Focus on London Session (approx 8:00 - 11:00 AM EAT)
+        hour = df.index[i].hour
+        if 8 <= hour <= 11:
+            
+            # Liquidity Sweep
+            high_prev = df['High'].iloc[i-5:i].max()
+            low_prev = df['Low'].iloc[i-5:i].min()
+            
+            # Strong Momentum Close
+            body_size = abs(df['Close'].iloc[i] - df['Open'].iloc[i])
+            
+            if df['High'].iloc[i] > high_prev and df['Close'].iloc[i] < df['Open'].iloc[i]:
+                # Sell Signal
+                if df['Low'].iloc[i+1:i+6].min() < (df['Close'].iloc[i] - 0.0500):
+                    balance += reward
+                else:
+                    balance -= risk
+            
+            elif df['Low'].iloc[i] < low_prev and df['Close'].iloc[i] > df['Open'].iloc[i]:
+                # Buy Signal
+                if df['High'].iloc[i+1:i+6].max() > (df['Close'].iloc[i] + 0.0500):
+                    balance += reward
+                else:
+                    balance -= risk
+
     print(f"--- Final Account Balance: ${balance:.2f} ---")
 
-run_high_probability_backtest()
+run_silver_bullet_backtest()
