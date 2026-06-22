@@ -1,38 +1,47 @@
 import yfinance as yf
 
-def test_price_action_45pip():
-    ticker = yf.Ticker("GBPUSD=X")
-    df = ticker.history(period="1mo", interval="1h")
+# List of pairs to test
+pairs = ["GBPUSD=X", "EURUSD=X", "USDJPY=X"]
+
+def backtest_multi_pair():
+    total_balance = 1000.00
+    # Each pair gets 1/3 of the total bankroll
+    # We risk 2% of the total balance across the 3 pairs
+    risk_per_trade = (total_balance * 0.02) / 3 
     
-    balance = 1000.00
-    sl = 0.0020  # 20 pips
-    tp = 0.0045  # 45 pips (1:2.25 RR)
+    print(f"--- Starting Multi-Pair Backtest (1 Month) ---")
     
-    print("--- Backtesting Price Action (45-pip Target) ---")
-    
-    for i in range(24, len(df) - 10):
-        # Key Levels: Highs/Lows of the last 24 hours
-        key_high = df['High'].iloc[i-24:i].max()
-        key_low = df['Low'].iloc[i-24:i].min()
+    for pair in pairs:
+        ticker = yf.Ticker(pair)
+        df = ticker.history(period="1mo", interval="1h")
         
-        # Bearish Engulfing at Key High
-        if df['High'].iloc[i] >= key_high:
-            if df['Open'].iloc[i] > df['Close'].iloc[i] and df['Close'].iloc[i] < df['Open'].iloc[i-1]:
-                # Sell: Target 45 pips
-                if df['Low'].iloc[i+1:i+15].min() < (df['Close'].iloc[i] - tp):
-                    balance += (tp * 10000) * 0.10
-                else:
-                    balance -= (sl * 10000) * 0.10
-                    
-        # Bullish Engulfing at Key Low
-        elif df['Low'].iloc[i] <= key_low:
-            if df['Open'].iloc[i] < df['Close'].iloc[i] and df['Close'].iloc[i] > df['Open'].iloc[i-1]:
-                # Buy: Target 45 pips
-                if df['High'].iloc[i+1:i+15].max() > (df['Close'].iloc[i] + tp):
-                    balance += (tp * 10000) * 0.10
-                else:
-                    balance -= (sl * 10000) * 0.10
+        pair_balance = 0 # Track profit/loss per pair
+        
+        for i in range(24, len(df) - 10):
+            key_high = df['High'].iloc[i-24:i].max()
+            key_low = df['Low'].iloc[i-24:i].min()
+            
+            # Bearish Engulfing
+            if df['High'].iloc[i] >= key_high:
+                if df['Open'].iloc[i] > df['Close'].iloc[i] and df['Close'].iloc[i] < df['Open'].iloc[i-1]:
+                    # Sell with 1:2.25 RR
+                    if df['Low'].iloc[i+1:i+15].min() < (df['Close'].iloc[i] - 0.0045):
+                        pair_balance += (risk_per_trade * 2.25)
+                    else:
+                        pair_balance -= risk_per_trade
+            
+            # Bullish Engulfing
+            elif df['Low'].iloc[i] <= key_low:
+                if df['Open'].iloc[i] < df['Close'].iloc[i] and df['Close'].iloc[i] > df['Open'].iloc[i-1]:
+                    # Buy with 1:2.25 RR
+                    if df['High'].iloc[i+1:i+15].max() > (df['Close'].iloc[i] + 0.0045):
+                        pair_balance += (risk_per_trade * 2.25)
+                    else:
+                        pair_balance -= risk_per_trade
+                        
+        print(f"{pair} Result: ${pair_balance:.2f}")
+        total_balance += pair_balance
+        
+    print(f"--- Final Combined Balance: ${total_balance:.2f} ---")
 
-    print(f"--- Final Balance after 45-pip Test: ${balance:.2f} ---")
-
-test_price_action_45pip()
+backtest_multi_pair()
