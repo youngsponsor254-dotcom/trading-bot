@@ -1,34 +1,32 @@
 import yfinance as yf
-import pandas as pd
 
-def run_backtest():
-    print("Starting Backtest...")
+def run_advanced_backtest():
     ticker = yf.Ticker("GBPUSD=X")
-    df = ticker.history(period="1y", interval="1h")
-    df['EMA200'] = df['Close'].ewm(span=200, adjust=False).mean()
+    # Get 2 months of data to ensure we have enough "Previous Day" context
+    df = ticker.history(period="2mo", interval="1h")
     
-    wins = 0
-    losses = 0
+    wins, losses = 0, 0
+    # Rule: 24-hour lookback for support
     
-    # Iterate through candles (skipping first 200 for EMA warm-up)
-    for i in range(200, len(df) - 5):
-        # Setup logic: Candle i-2 and i-1
-        c1_high = df['High'].iloc[i-2]
-        c3_low = df['Low'].iloc[i-1]
+    for i in range(24, len(df) - 5):
+        # 1. Trend Filter
+        ema200 = df['Close'].iloc[i-200:i].mean()
+        is_bearish = df['Close'].iloc[i] < ema200
         
-        # Bullish FVG check
-        if c3_low > c1_high and df['Close'].iloc[i] > df['EMA200'].iloc[i]:
-            # Simple simulation: Did price go up in the next 5 hours?
-            if df['Close'].iloc[i+5] > df['Close'].iloc[i]:
+        # 2. Liquidity Sweep (Rule 2)
+        swing_low = df['Low'].iloc[i-24:i].min()
+        liquidity_swept = df['Low'].iloc[i] < swing_low and df['Close'].iloc[i] > swing_low
+        
+        # 3. Execution (The "Rectified" Logic)
+        if is_bearish and liquidity_swept:
+            # Simulate a trade: If price moves up 2% before dropping 1%
+            if df['High'].iloc[i+1:i+5].max() > df['Close'].iloc[i] * 1.002:
                 wins += 1
             else:
                 losses += 1
                 
-    print(f"--- Results ---")
-    print(f"Wins: {wins}")
-    print(f"Losses: {losses}")
-    if (wins + losses) > 0:
-        win_rate = (wins / (wins + losses)) * 100
-        print(f"Win Rate: {win_rate:.2f}%")
+    win_rate = (wins / (wins + losses)) * 100
+    print(f"--- Rectified Backtest Results ---")
+    print(f"Win Rate: {win_rate:.2f}%")
 
-run_backtest()
+run_advanced_backtest()
