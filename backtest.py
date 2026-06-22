@@ -1,15 +1,15 @@
 import yfinance as yf
 
-def run_20_45_backtest():
+def run_60_tp_backtest():
     ticker = yf.Ticker("GBPUSD=X")
     df = ticker.history(period="3mo", interval="1h")
     
     balance = 1000.00
-    # TP 45 pips = 0.0045, SL 20 pips = 0.0020
-    tp_val = 0.0045
+    # TP 60 pips = 0.0060, SL 20 pips = 0.0020
+    tp_val = 0.0060
     sl_val = 0.0020
     
-    print("--- Testing 20 SL / 45 TP Strategy ---")
+    print("--- Testing 20 SL / 60 TP Strategy ---")
     
     for i in range(200, len(df) - 10):
         ema200 = df['Close'].iloc[i-200:i].mean()
@@ -21,20 +21,18 @@ def run_20_45_backtest():
         
         if df['Close'].iloc[i] < ema200 and is_fvg:
             # Sell Trade
-            # Check if price hits TP (entry - 0.0045) before SL (entry + 0.0020)
-            if (entry_price - df['Low'].iloc[i+1:i+24].min()) >= tp_val:
-                balance += 45
+            if (entry_price - df['Low'].iloc[i+1:i+36].min()) >= tp_val:
+                balance += 60
             else:
                 balance -= 20
         
         elif df['Close'].iloc[i] > ema200 and is_fvg:
             # Buy Trade
-            # Check if price hits TP (entry + 0.0045) before SL (entry - 0.0020)
-            if (df['High'].iloc[i+1:i+24].max() - entry_price) >= tp_val:
-                balance += 45
+            if (df['High'].iloc[i+1:i+36].max() - entry_price) >= tp_val:
+                balance += 60
             else:
                 balance -= 20
                 
-    print(f"--- Final Account Balance: ${balance:.2f} ---")
+    print(f"--- Final Account Balance with 60 TP: ${balance:.2f} ---")
 
-run_20_45_backtest()
+run_60_tp_backtest()
