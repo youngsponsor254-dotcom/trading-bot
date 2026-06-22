@@ -1,13 +1,13 @@
 import yfinance as yf
 
-# Your new, more stable basket
-pairs = ["USDJPY=X", "USDCHF=X", "EURJPY=X"]
+# Yen-centric basket
+pairs = ["USDJPY=X", "EURJPY=X", "AUDJPY=X"]
 
-def backtest_new_basket():
+def backtest_yen_basket():
     total_balance = 1000.00
     risk_per_trade = (total_balance * 0.02) / 3 
     
-    print(f"--- Starting New Basket Backtest (1 Month) ---")
+    print(f"--- Backtesting Yen Basket (1 Month) ---")
     
     for pair in pairs:
         ticker = yf.Ticker(pair)
@@ -19,19 +19,19 @@ def backtest_new_basket():
             key_high = df['High'].iloc[i-24:i].max()
             key_low = df['Low'].iloc[i-24:i].min()
             
-            # Bearish Engulfing
+            # Bearish Engulfing at Key High
             if df['High'].iloc[i] >= key_high:
                 if df['Open'].iloc[i] > df['Close'].iloc[i] and df['Close'].iloc[i] < df['Open'].iloc[i-1]:
-                    # Sell with 1:2.25 RR
+                    # Sell
                     if df['Low'].iloc[i+1:i+15].min() < (df['Close'].iloc[i] - 0.0045):
                         pair_balance += (risk_per_trade * 2.25)
                     else:
                         pair_balance -= risk_per_trade
             
-            # Bullish Engulfing
+            # Bullish Engulfing at Key Low
             elif df['Low'].iloc[i] <= key_low:
                 if df['Open'].iloc[i] < df['Close'].iloc[i] and df['Close'].iloc[i] > df['Open'].iloc[i-1]:
-                    # Buy with 1:2.25 RR
+                    # Buy
                     if df['High'].iloc[i+1:i+15].max() > (df['Close'].iloc[i] + 0.0045):
                         pair_balance += (risk_per_trade * 2.25)
                     else:
@@ -42,4 +42,4 @@ def backtest_new_basket():
         
     print(f"--- Final Combined Balance: ${total_balance:.2f} ---")
 
-backtest_new_basket()
+backtest_yen_basket()
