@@ -3,34 +3,57 @@ from discord import SyncWebhook
 import time
 
 # --- CONFIGURATION ---
-# Replace the URL below with your actual Discord Webhook URL
 WEBHOOK_URL = "https://discord.com/api/webhooks/1518322612260835408/EPwi1MJA3QMQldKh3hohFD-nIg2ahtfcX3X0zr4b2XkbDf3Fbw0BExCI4-AvSsc9KQtR"
 webhook = SyncWebhook.from_url(WEBHOOK_URL)
 WATCHLIST = ["USDJPY=X", "EURJPY=X", "AUDJPY=X"]
+active_trades = []
 
-print("--- Bot Started: 15-Minute Scanning Mode ---")
+print("--- Bot Started: 15-Minute Mode (Heartbeat 1h) ---")
 
-# --- MAIN LOOP ---
+# Counter to track hours for heartbeat (4 cycles of 15m = 1 hour)
+heartbeat_counter = 0
+
 while True:
-    # Send a heartbeat message to confirm the bot is active
-    webhook.send("🤖 Bot is active and scanning the market...")
+    # --- 1-Hour Heartbeat Logic ---
+    if heartbeat_counter >= 4:
+        webhook.send("🤖 Hourly Check: Bot is active and scanning...")
+        heartbeat_counter = 0
+    heartbeat_counter += 1
     
+    # --- SCANNING LOOP ---
     for pair in WATCHLIST:
         ticker = yf.Ticker(pair)
-        # Fetch 15-minute interval data
         df = ticker.history(period="2d", interval="15m")
         
-        # Calculate 24h High/Low (last 96 candles = 24 hours)
+        # 24h High/Low (96 candles = 24 hours)
         key_high = df['High'].iloc[-97:-1].max()
         key_low = df['Low'].iloc[-97:-1].min()
         
-        # Bullish Engulfing Logic
+        # Determine Signal
+        signal_message = None
+        
+        # Bullish
         if df['Low'].iloc[-1] <= key_low and df['Open'].iloc[-1] < df['Close'].iloc[-1] and df['Close'].iloc[-1] > df['Open'].iloc[-2]:
-            webhook.send(f"🟢 BULLISH (15m): {pair} at {key_low:.4f}")
+            sl = df['Low'].iloc[-1] - 0.0020
+            tp = df['Close'].iloc[-1] + 0.0040
+            signal_message = f"🟢 **BUY SIGNAL: {pair}**\nEntry: {df['Close'].iloc[-1]:.4f}\nSL: {sl:.4f}\nTP: {tp:.4f}"
             
-        # Bearish Engulfing Logic
+        # Bearish
         elif df['High'].iloc[-1] >= key_high and df['Open'].iloc[-1] > df['Close'].iloc[-1] and df['Close'].iloc[-1] < df['Open'].iloc[-2]:
-            webhook.send(f"🔴 BEARISH (15m): {pair} at {key_high:.4f}")
+            sl = df['High'].iloc[-1] + 0.0020
+            tp = df['Close'].iloc[-1] - 0.0040
+            signal_message = f"🔴 **SELL SIGNAL: {pair}**\nEntry: {df['Close'].iloc[-1]:.4f}\nSL: {sl:.4f}\nTP: {tp:.4f}"
             
-    # Wait 15 minutes (900 seconds) before the next scan
-    time.sleep(900)
+        # Send double alert if signal found
+        if signal_message:
+            webhook.send(signal_message)
+            time.sleep(30) # 30s interval
+            webhook.send(signal_message)
+
+    # --- TP/SL CHECK ---
+    for trade in active_trades[:]:
+        # Simple update check...
+        pass # Add your custom tracking logic here if needed
+            
+    # Wait for the remainder of the 15-minute cycle
+    time.sleep(870)
